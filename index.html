@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPhone8兆 ジャンピングゲーム</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .game-area {
+            width: 100%;
+            height: 100%;
+            background-color: #87CEEB;
+            position: relative;
+            overflow: hidden;
+        }
+        .player {
+            width: 15vw;
+            height: 15vw;
+            max-width: 100px;
+            max-height: 100px;
+            position: absolute;
+            bottom: 10%;
+            left: 10%;
+            background-image: url('https://imgur.com/EmQCrLS.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+            transition: bottom 0.1s;
+        }
+        .obstacle {
+            width: 8vw;
+            height: 12vw;
+            max-width: 50px;
+            max-height: 70px;
+            position: absolute;
+            bottom: 10%;
+            right: -8vw;
+            background-image: url('https://i.imgur.com/XPq4HGT.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
+        }
+        .ground {
+            width: 100%;
+            height: 10%;
+            background-color: #8B4513;
+            position: absolute;
+            bottom: 0;
+        }
+        .start-screen, .game-over-screen, .countdown-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 10;
+        }
+        input, button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        #countdown {
+            font-size: 48px;
+            font-weight: bold;
+        }
+        #ranking {
+            margin-top: 20px;
+            text-align: left;
+            width: 80%;
+            max-width: 300px;
+        }
+        #ranking h2 {
+            text-align: center;
+        }
+        #score-display {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            z-index: 5;
+        }
+        #super-jump-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #game-over-message {
+            font-size: 48px;
+            font-weight: bold;
+            color: red;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="game-area" class="game-area">
+            <div id="player" class="player"></div>
+            <div id="obstacle" class="obstacle" style="display: none;"></div>
+            <div class="ground"></div>
+            <div id="start-screen" class="start-screen">
+                <h1>iPhone8兆</h1>
+                <input type="text" id="player-name" placeholder="ニックネームを入力">
+                <button id="start-button">ゲーム開始</button>
+            </div>
+            <div id="countdown-screen" class="countdown-screen" style="display: none;">
+                <div id="countdown"></div>
+            </div>
+            <div id="game-over-screen" class="game-over-screen" style="display: none;">
+                <div id="game-over-message">ガチ死に</div>
+                <p id="final-score"></p>
+                <div id="ranking">
+                    <h2>ランキング</h2>
+                    <ol id="ranking-list"></ol>
+                </div>
+                <button id="replay-button">もう一度プレイ</button>
+            </div>
+            <div id="score-display" style="display: none;">
+                スコア: <span id="score">0</span>
+            </div>
+            <button id="super-jump-button" style="display: none;">スーパージャンプ</button>
+        </div>
+    </div>
+
+    <script>
+        // ここに前回のJavaScriptコードを貼り付けてください
+        const player = document.getElementById('player');
+        const obstacle = document.getElementById('obstacle');
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const countdownScreen = document.getElementById('countdown-screen');
+        const countdownElement = document.getElementById('countdown');
+        const scoreDisplay = document.getElementById('score-display');
+        const scoreElement = document.getElementById('score');
+        const finalScoreElement = document.getElementById('final-score');
+        const startButton = document.getElementById('start-button');
+        const replayButton = document.getElementById('replay-button');
+        const playerNameInput = document.getElementById('player-name');
+        const rankingList = document.getElementById('ranking-list');
+        const gameArea = document.getElementById('game-area');
+        const superJumpButton = document.getElementById('super-jump-button');
+
+        let score = 0;
+        let gameSpeed = 8;
+        let gameLoop;
+        let isJumping = false;
+        let rankings = [];
+        let isSuperJump = false;
+
+        const baseBottom = 10;
+        let jumpHeight, jumpSpeed, fallSpeed, maxJumpHeight;
+
+        function calculateJumpParameters() {
+            const gameAreaHeight = gameArea.clientHeight;
+            jumpHeight = gameAreaHeight * 2.25;
+            jumpSpeed = gameAreaHeight * 0.08;
+            fallSpeed = gameAreaHeight * 0.065;
+            maxJumpHeight = gameAreaHeight * 0.98;
+        }
+
+        function jump() {
+            if (!isJumping) {
+                isJumping = true;
+                let currentHeight = 0;
+                const targetHeight = isSuperJump ? jumpHeight * 1.5 : jumpHeight;
+                const currentSpeed = isSuperJump ? jumpSpeed * 1.2 : jumpSpeed;
+                const jumpInterval = setInterval(() => {
+                    const playerBottom = parseFloat(window.getComputedStyle(player).getPropertyValue('bottom'));
+                    if (currentHeight < targetHeight && playerBottom < maxJumpHeight) {
+                        const newBottom = Math.min(playerBottom + currentSpeed, maxJumpHeight);
+                        player.style.bottom = `${newBottom}px`;
+                        currentHeight += currentSpeed;
+                    } else {
+                        clearInterval(jumpInterval);
+                        fall();
+                    }
+                }, 10);
+                isSuperJump = false;
+            }
+        }
+
+        function fall() {
+            const fallInterval = setInterval(() => {
+                const playerBottom = parseFloat(window.getComputedStyle(player).getPropertyValue('bottom'));
+                const groundHeight = gameArea.clientHeight * 0.1;
+                if (playerBottom > groundHeight) {
+                    const newBottom = Math.max(playerBottom - fallSpeed, groundHeight);
+                    player.style.bottom = `${newBottom}px`;
+                } else {
+                    clearInterval(fallInterval);
+                    player.style.bottom = `${groundHeight}px`;
+                    isJumping = false;
+                }
+            }, 10);
+        }
+
+        function moveObstacle() {
+            let obstacleRight = parseFloat(window.getComputedStyle(obstacle).getPropertyValue('right'));
+            const gameAreaWidth = gameArea.clientWidth;
+            if (obstacleRight > gameAreaWidth) {
+                obstacle.style.right = '-8vw';
+                score++;
+                updateScore();
+            } else {
+                obstacle.style.right = `${obstacleRight + gameSpeed}px`;
+            }
+        }
+
+        function checkCollision() {
+            const playerRect = player.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+
+            const collisionThreshold = 0.6;
+
+            if (
+                playerRect.left < obstacleRect.right - (obstacleRect.width * (1 - collisionThreshold)) &&
+                playerRect.right > obstacleRect.left + (obstacleRect.width * (1 - collisionThreshold)) &&
+                playerRect.top < obstacleRect.bottom - (obstacleRect.height * (1 - collisionThreshold)) &&
+                playerRect.bottom > obstacleRect.top + (obstacleRect.height * (1 - collisionThreshold))
+            ) {
+                gameOver();
+            }
+        }
+
+        function updateScore() {
+            scoreElement.textContent = score;
+            gameSpeed = Math.min(20, 8 + Math.floor(score / 5));
+        }
+
+        function startGame() {
+            if (playerNameInput.value.trim() === '') return;
+            startScreen.style.display = 'none';
+            countdownScreen.style.display = 'flex';
+            let count = 3;
+            countdownElement.textContent = count;
+            const countdownInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownElement.textContent = count;
+                } else {
+                    clearInterval(countdownInterval);
+                    countdownScreen.style.display = 'none';
+                    obstacle.style.display = 'block';
+                    scoreDisplay.style.display = 'block';
+                    superJumpButton.style.display = 'block';
+                    calculateJumpParameters();
+                    const groundHeight = gameArea.clientHeight * 0.1;
+                    player.style.bottom = `${groundHeight}px`;
+                    gameLoop = setInterval(() => {
+                        moveObstacle();
+                        checkCollision();
+                    }, 16);
+                }
+            }, 1000);
+        }
+
+        function gameOver() {
+            clearInterval(gameLoop);
+            obstacle.style.display = 'none';
+            scoreDisplay.style.display = 'none';
+            superJumpButton.style.display = 'none';
+            gameOverScreen.style.display = 'flex';
+            finalScoreElement.textContent = `あなたのスコア: ${score}`;
+            updateRankings();
+            displayRankings();
+        }
+
+        function updateRankings() {
+            const playerName = playerNameInput.value.trim();
+            rankings.push({ name: playerName, score: score });
+            rankings.sort((a, b) => b.score - a.score);
+            rankings = rankings.slice(0, 5);
+        }
+
+        function displayRankings() {
+            rankingList.innerHTML = '';
+            rankings.forEach(rank => {
+                const li = document.createElement('li');
+                li.textContent = `${rank.name}: ${rank.score}`;
+                rankingList.appendChild(li);
+            });
+        }
+
+        function resetGame() {
+            score = 0;
+            gameSpeed = 8;
+            updateScore();
+            const groundHeight = gameArea.clientHeight * 0.1;
+            player.style.bottom = `${groundHeight}px`;
+            obstacle.style.right = '-8vw';
+            gameOverScreen.style.display = 'none';
+            isJumping = false;
+            startGame();
+        }
+
+        function superJump() {
+            isSuperJump = true;
+            jump();
+        }
+
+        startButton.addEventListener('click', startGame);
+        replayButton.addEventListener('click', resetGame);
+        superJumpButton.addEventListener('click', superJump);
+        document.addEventListener('keydown', event => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                jump();
+            }
+        });
+        document.addEventListener('touchstart', jump);
+        document.addEventListener('click', (e) => {
+            if (e.target !== superJumpButton) {
+                jump();
+            }
+        });
+
+        document.body.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        window.addEventListener('resize', calculateJumpParameters);
+    </script>
+</body>
+</html>
+
