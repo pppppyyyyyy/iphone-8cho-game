@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPhone8兆 ジャンピングゲーム (多段ジャンプ版)</title>
+    <title>iPhone8兆 ジャンピングゲーム (ジャンプボタン版)</title>
     <style>
-        /* 前回と同じCSSスタイル */
         body, html {
             margin: 0;
             padding: 0;
@@ -103,6 +102,20 @@
             color: red;
             margin-bottom: 30px;
         }
+        #jump-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 80px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10;
+        }
     </style>
 </head>
 <body>
@@ -131,6 +144,7 @@
             <div id="score-display" style="display: none;">
                 スコア: <span id="score">0</span>
             </div>
+            <button id="jump-button" style="display: none;">ジャンプ</button>
         </div>
     </div>
 
@@ -149,12 +163,13 @@
         const playerNameInput = document.getElementById('player-name');
         const rankingList = document.getElementById('ranking-list');
         const gameArea = document.getElementById('game-area');
+        const jumpButton = document.getElementById('jump-button');
 
         let score = 0;
         let gameSpeed = 3;
         let gameLoop;
         let jumpCount = 0;
-        let maxJumps = 2; // 最大ジャンプ回数
+        let maxJumps = 2;
         let rankings = [];
         let gameStarted = false;
 
@@ -163,7 +178,7 @@
 
         function calculateJumpParameters() {
             const gameAreaHeight = gameArea.clientHeight;
-            jumpHeight = gameAreaHeight * 0.4; // ジャンプの高さを調整
+            jumpHeight = gameAreaHeight * 0.4;
             jumpSpeed = gameAreaHeight * 0.035;
             fallSpeed = gameAreaHeight * 0.025;
             maxJumpHeight = gameAreaHeight * 0.8;
@@ -199,7 +214,7 @@
                 } else {
                     clearInterval(fallInterval);
                     player.style.bottom = `${groundHeight}px`;
-                    jumpCount = 0; // 地面に着いたらジャンプカウントをリセット
+                    jumpCount = 0;
                 }
             }, 16);
         }
@@ -252,6 +267,7 @@
                     countdownScreen.style.display = 'none';
                     obstacle.style.display = 'block';
                     scoreDisplay.style.display = 'block';
+                    jumpButton.style.display = 'block';
                     calculateJumpParameters();
                     const groundHeight = gameArea.clientHeight * 0.15;
                     player.style.bottom = `${groundHeight}px`;
@@ -269,6 +285,7 @@
             clearInterval(gameLoop);
             obstacle.style.display = 'none';
             scoreDisplay.style.display = 'none';
+            jumpButton.style.display = 'none';
             gameOverScreen.style.display = 'flex';
             finalScoreElement.textContent = `あなたのスコア: ${score}`;
             updateRankings();
@@ -305,20 +322,12 @@
 
         startButton.addEventListener('click', startGame);
         replayButton.addEventListener('click', resetGame);
+        jumpButton.addEventListener('click', jump);
 
-        // タッチイベントの処理を改善
-        gameArea.addEventListener('touchstart', function(e) {
-            e.preventDefault(); // デフォルトの動作を防止
-            if (e.target === startButton || e.target === replayButton) {
-                e.target.click(); // ボタンのクリックイベントを発火
-            } else if (gameStarted && e.target !== playerNameInput) {
-                jump();
-            }
-        }, { passive: false });
-
-        // クリックイベントの処理も追加
-        gameArea.addEventListener('click', function(e) {
-            if (gameStarted && e.target !== startButton && e.target !== replayButton && e.target !== playerNameInput) {
+        // スペースキーでもジャンプできるようにする
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && gameStarted) {
+                e.preventDefault();
                 jump();
             }
         });
