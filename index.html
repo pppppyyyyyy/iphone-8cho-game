@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPhone8兆 ジャンピングゲーム</title>
+    <title>iPhone8兆 ジャンピングゲーム (スマホ版)</title>
     <style>
         body, html {
             margin: 0;
@@ -31,10 +31,8 @@
         .player {
             width: 15vw;
             height: 15vw;
-            max-width: 100px;
-            max-height: 100px;
             position: absolute;
-            bottom: 10%;
+            bottom: 15%;
             left: 10%;
             background-image: url('https://imgur.com/EmQCrLS.jpg');
             background-size: contain;
@@ -43,13 +41,11 @@
             transition: bottom 0.1s;
         }
         .obstacle {
-            width: 8vw;
-            height: 12vw;
-            max-width: 50px;
-            max-height: 70px;
+            width: 10vw;
+            height: 15vw;
             position: absolute;
-            bottom: 10%;
-            right: -8vw;
+            bottom: 15%;
+            right: -10vw;
             background-image: url('https://i.imgur.com/XPq4HGT.jpg');
             background-size: contain;
             background-repeat: no-repeat;
@@ -57,7 +53,7 @@
         }
         .ground {
             width: 100%;
-            height: 10%;
+            height: 15%;
             background-color: #8B4513;
             position: absolute;
             bottom: 0;
@@ -77,11 +73,11 @@
         }
         input, button {
             margin: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 15px 30px;
+            font-size: 20px;
         }
         #countdown {
-            font-size: 48px;
+            font-size: 72px;
             font-weight: bold;
         }
         #ranking {
@@ -95,28 +91,28 @@
         }
         #score-display {
             position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 18px;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
             z-index: 5;
         }
         #super-jump-button {
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 30px;
+            font-size: 20px;
             background-color: #4CAF50;
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 10px;
             cursor: pointer;
         }
         #game-over-message {
-            font-size: 48px;
+            font-size: 72px;
             font-weight: bold;
             color: red;
-            margin-bottom: 20px;
+            margin-bottom: 30px;
         }
     </style>
 </head>
@@ -151,7 +147,6 @@
     </div>
 
     <script>
-        // ここに前回のJavaScriptコードを貼り付けてください
         const player = document.getElementById('player');
         const obstacle = document.getElementById('obstacle');
         const startScreen = document.getElementById('start-screen');
@@ -169,21 +164,21 @@
         const superJumpButton = document.getElementById('super-jump-button');
 
         let score = 0;
-        let gameSpeed = 8;
+        let gameSpeed = 3; // 障害物の速度を遅く設定
         let gameLoop;
         let isJumping = false;
         let rankings = [];
         let isSuperJump = false;
 
-        const baseBottom = 10;
+        const baseBottom = 15;
         let jumpHeight, jumpSpeed, fallSpeed, maxJumpHeight;
 
         function calculateJumpParameters() {
             const gameAreaHeight = gameArea.clientHeight;
-            jumpHeight = gameAreaHeight * 2.25;
-            jumpSpeed = gameAreaHeight * 0.08;
-            fallSpeed = gameAreaHeight * 0.065;
-            maxJumpHeight = gameAreaHeight * 0.98;
+            jumpHeight = gameAreaHeight * 0.5; // ジャンプの高さを高く設定
+            jumpSpeed = gameAreaHeight * 0.03;
+            fallSpeed = gameAreaHeight * 0.02;
+            maxJumpHeight = gameAreaHeight * 0.7;
         }
 
         function jump() {
@@ -202,7 +197,7 @@
                         clearInterval(jumpInterval);
                         fall();
                     }
-                }, 10);
+                }, 16);
                 isSuperJump = false;
             }
         }
@@ -210,7 +205,7 @@
         function fall() {
             const fallInterval = setInterval(() => {
                 const playerBottom = parseFloat(window.getComputedStyle(player).getPropertyValue('bottom'));
-                const groundHeight = gameArea.clientHeight * 0.1;
+                const groundHeight = gameArea.clientHeight * 0.15;
                 if (playerBottom > groundHeight) {
                     const newBottom = Math.max(playerBottom - fallSpeed, groundHeight);
                     player.style.bottom = `${newBottom}px`;
@@ -219,14 +214,14 @@
                     player.style.bottom = `${groundHeight}px`;
                     isJumping = false;
                 }
-            }, 10);
+            }, 16);
         }
 
         function moveObstacle() {
             let obstacleRight = parseFloat(window.getComputedStyle(obstacle).getPropertyValue('right'));
             const gameAreaWidth = gameArea.clientWidth;
             if (obstacleRight > gameAreaWidth) {
-                obstacle.style.right = '-8vw';
+                obstacle.style.right = '-10vw';
                 score++;
                 updateScore();
             } else {
@@ -238,7 +233,7 @@
             const playerRect = player.getBoundingClientRect();
             const obstacleRect = obstacle.getBoundingClientRect();
 
-            const collisionThreshold = 0.6;
+            const collisionThreshold = 0.5;
 
             if (
                 playerRect.left < obstacleRect.right - (obstacleRect.width * (1 - collisionThreshold)) &&
@@ -252,7 +247,7 @@
 
         function updateScore() {
             scoreElement.textContent = score;
-            gameSpeed = Math.min(20, 8 + Math.floor(score / 5));
+            gameSpeed = Math.min(8, 3 + Math.floor(score / 10)); // 最大速度を抑える
         }
 
         function startGame() {
@@ -272,12 +267,12 @@
                     scoreDisplay.style.display = 'block';
                     superJumpButton.style.display = 'block';
                     calculateJumpParameters();
-                    const groundHeight = gameArea.clientHeight * 0.1;
+                    const groundHeight = gameArea.clientHeight * 0.15;
                     player.style.bottom = `${groundHeight}px`;
                     gameLoop = setInterval(() => {
                         moveObstacle();
                         checkCollision();
-                    }, 16);
+                    }, 20);
                 }
             }, 1000);
         }
@@ -311,11 +306,11 @@
 
         function resetGame() {
             score = 0;
-            gameSpeed = 8;
+            gameSpeed = 3;
             updateScore();
-            const groundHeight = gameArea.clientHeight * 0.1;
+            const groundHeight = gameArea.clientHeight * 0.15;
             player.style.bottom = `${groundHeight}px`;
-            obstacle.style.right = '-8vw';
+            obstacle.style.right = '-10vw';
             gameOverScreen.style.display = 'none';
             isJumping = false;
             startGame();
@@ -329,19 +324,13 @@
         startButton.addEventListener('click', startGame);
         replayButton.addEventListener('click', resetGame);
         superJumpButton.addEventListener('click', superJump);
-        document.addEventListener('keydown', event => {
-            if (event.code === 'Space') {
-                event.preventDefault();
-                jump();
-            }
-        });
-        document.addEventListener('touchstart', jump);
-        document.addEventListener('click', (e) => {
+        document.addEventListener('touchstart', (e) => {
             if (e.target !== superJumpButton) {
                 jump();
             }
         });
 
+        // スマートフォンでのスクロール防止
         document.body.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
@@ -350,4 +339,3 @@
     </script>
 </body>
 </html>
-
