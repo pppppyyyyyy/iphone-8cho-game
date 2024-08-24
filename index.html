@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPhone8兆 ジャンピングゲーム (スマホ版)</title>
+    <title>iPhone8兆 ジャンピングゲーム (高ジャンプ版)</title>
     <style>
-        /* 前回と同じCSSスタイル */
         body, html {
             margin: 0;
             padding: 0;
@@ -97,18 +96,6 @@
             font-size: 24px;
             z-index: 5;
         }
-        #super-jump-button {
-            position: absolute;
-            bottom: 30px;
-            right: 30px;
-            padding: 15px 30px;
-            font-size: 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-        }
         #game-over-message {
             font-size: 72px;
             font-weight: bold;
@@ -143,7 +130,6 @@
             <div id="score-display" style="display: none;">
                 スコア: <span id="score">0</span>
             </div>
-            <button id="super-jump-button" style="display: none;">スーパージャンプ</button>
         </div>
     </div>
 
@@ -162,14 +148,12 @@
         const playerNameInput = document.getElementById('player-name');
         const rankingList = document.getElementById('ranking-list');
         const gameArea = document.getElementById('game-area');
-        const superJumpButton = document.getElementById('super-jump-button');
 
         let score = 0;
         let gameSpeed = 3;
         let gameLoop;
         let isJumping = false;
         let rankings = [];
-        let isSuperJump = false;
         let gameStarted = false;
 
         const baseBottom = 15;
@@ -177,31 +161,27 @@
 
         function calculateJumpParameters() {
             const gameAreaHeight = gameArea.clientHeight;
-            jumpHeight = gameAreaHeight * 0.5;
-            jumpSpeed = gameAreaHeight * 0.03;
-            fallSpeed = gameAreaHeight * 0.02;
-            maxJumpHeight = gameAreaHeight * 0.7;
+            jumpHeight = gameAreaHeight * 0.7; // ジャンプの高さを増加
+            jumpSpeed = gameAreaHeight * 0.035; // ジャンプ速度を少し上げる
+            fallSpeed = gameAreaHeight * 0.025; // 落下速度も少し上げる
+            maxJumpHeight = gameAreaHeight * 0.8;
         }
 
         function jump() {
-            console.log('Jump function called'); // デバッグログ
             if (!isJumping && gameStarted) {
                 isJumping = true;
                 let currentHeight = 0;
-                const targetHeight = isSuperJump ? jumpHeight * 1.5 : jumpHeight;
-                const currentSpeed = isSuperJump ? jumpSpeed * 1.2 : jumpSpeed;
                 const jumpInterval = setInterval(() => {
                     const playerBottom = parseFloat(window.getComputedStyle(player).getPropertyValue('bottom'));
-                    if (currentHeight < targetHeight && playerBottom < maxJumpHeight) {
-                        const newBottom = Math.min(playerBottom + currentSpeed, maxJumpHeight);
+                    if (currentHeight < jumpHeight && playerBottom < maxJumpHeight) {
+                        const newBottom = Math.min(playerBottom + jumpSpeed, maxJumpHeight);
                         player.style.bottom = `${newBottom}px`;
-                        currentHeight += currentSpeed;
+                        currentHeight += jumpSpeed;
                     } else {
                         clearInterval(jumpInterval);
                         fall();
                     }
                 }, 16);
-                isSuperJump = false;
             }
         }
 
@@ -254,7 +234,6 @@
         }
 
         function startGame() {
-            console.log('Start game function called'); // デバッグログ
             if (playerNameInput.value.trim() === '') return;
             startScreen.style.display = 'none';
             countdownScreen.style.display = 'flex';
@@ -269,7 +248,6 @@
                     countdownScreen.style.display = 'none';
                     obstacle.style.display = 'block';
                     scoreDisplay.style.display = 'block';
-                    superJumpButton.style.display = 'block';
                     calculateJumpParameters();
                     const groundHeight = gameArea.clientHeight * 0.15;
                     player.style.bottom = `${groundHeight}px`;
@@ -287,7 +265,6 @@
             clearInterval(gameLoop);
             obstacle.style.display = 'none';
             scoreDisplay.style.display = 'none';
-            superJumpButton.style.display = 'none';
             gameOverScreen.style.display = 'flex';
             finalScoreElement.textContent = `あなたのスコア: ${score}`;
             updateRankings();
@@ -322,20 +299,12 @@
             startGame();
         }
 
-        function superJump() {
-            console.log('Super Jump activated'); // デバッグログ
-            isSuperJump = true;
-            jump();
-        }
-
         startButton.addEventListener('click', startGame);
         replayButton.addEventListener('click', resetGame);
-        superJumpButton.addEventListener('click', superJump);
 
-        // タッチイベントの処理を改善
+        // タッチイベントの処理
         gameArea.addEventListener('touchstart', function(e) {
-            console.log('Touch event detected', e.target); // デバッグログ
-            if (e.target === startButton || e.target === replayButton || e.target === superJumpButton) {
+            if (e.target === startButton || e.target === replayButton) {
                 e.target.click(); // ボタンのクリックイベントを発火
             } else if (gameStarted && e.target !== playerNameInput) {
                 jump();
