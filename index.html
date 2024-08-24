@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -5,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>iPhone8兆 ジャンピングゲーム (スマホ版)</title>
     <style>
+        /* 前回と同じCSSスタイル */
         body, html {
             margin: 0;
             padding: 0;
@@ -164,7 +166,7 @@
         const superJumpButton = document.getElementById('super-jump-button');
 
         let score = 0;
-        let gameSpeed = 3; // 障害物の速度を遅く設定
+        let gameSpeed = 3;
         let gameLoop;
         let isJumping = false;
         let rankings = [];
@@ -175,13 +177,14 @@
 
         function calculateJumpParameters() {
             const gameAreaHeight = gameArea.clientHeight;
-            jumpHeight = gameAreaHeight * 0.5; // ジャンプの高さを高く設定
+            jumpHeight = gameAreaHeight * 0.5;
             jumpSpeed = gameAreaHeight * 0.03;
             fallSpeed = gameAreaHeight * 0.02;
             maxJumpHeight = gameAreaHeight * 0.7;
         }
 
         function jump() {
+            console.log('Jump function called'); // デバッグログ
             if (!isJumping) {
                 isJumping = true;
                 let currentHeight = 0;
@@ -247,7 +250,7 @@
 
         function updateScore() {
             scoreElement.textContent = score;
-            gameSpeed = Math.min(8, 3 + Math.floor(score / 10)); // 最大速度を抑える
+            gameSpeed = Math.min(8, 3 + Math.floor(score / 10));
         }
 
         function startGame() {
@@ -317,6 +320,7 @@
         }
 
         function superJump() {
+            console.log('Super Jump activated'); // デバッグログ
             isSuperJump = true;
             jump();
         }
@@ -324,11 +328,15 @@
         startButton.addEventListener('click', startGame);
         replayButton.addEventListener('click', resetGame);
         superJumpButton.addEventListener('click', superJump);
-        document.addEventListener('touchstart', (e) => {
+
+        // タッチイベントの処理を改善
+        gameArea.addEventListener('touchstart', function(e) {
+            console.log('Touch event detected'); // デバッグログ
+            e.preventDefault(); // デフォルトの動作を防止
             if (e.target !== superJumpButton) {
                 jump();
             }
-        });
+        }, { passive: false });
 
         // スマートフォンでのスクロール防止
         document.body.addEventListener('touchmove', function(e) {
