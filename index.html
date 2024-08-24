@@ -3,8 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>iPhone8兆 ジャンピングゲーム (高ジャンプ版)</title>
+    <title>iPhone8兆 ジャンピングゲーム (多段ジャンプ版)</title>
     <style>
+        /* 前回と同じCSSスタイル */
         body, html {
             margin: 0;
             padding: 0;
@@ -152,7 +153,8 @@
         let score = 0;
         let gameSpeed = 3;
         let gameLoop;
-        let isJumping = false;
+        let jumpCount = 0;
+        let maxJumps = 2; // 最大ジャンプ回数
         let rankings = [];
         let gameStarted = false;
 
@@ -161,15 +163,15 @@
 
         function calculateJumpParameters() {
             const gameAreaHeight = gameArea.clientHeight;
-            jumpHeight = gameAreaHeight * 0.7; // ジャンプの高さを増加
-            jumpSpeed = gameAreaHeight * 0.035; // ジャンプ速度を少し上げる
-            fallSpeed = gameAreaHeight * 0.025; // 落下速度も少し上げる
+            jumpHeight = gameAreaHeight * 0.4; // ジャンプの高さを調整
+            jumpSpeed = gameAreaHeight * 0.035;
+            fallSpeed = gameAreaHeight * 0.025;
             maxJumpHeight = gameAreaHeight * 0.8;
         }
 
         function jump() {
-            if (!isJumping && gameStarted) {
-                isJumping = true;
+            if (jumpCount < maxJumps && gameStarted) {
+                jumpCount++;
                 let currentHeight = 0;
                 const jumpInterval = setInterval(() => {
                     const playerBottom = parseFloat(window.getComputedStyle(player).getPropertyValue('bottom'));
@@ -179,7 +181,9 @@
                         currentHeight += jumpSpeed;
                     } else {
                         clearInterval(jumpInterval);
-                        fall();
+                        if (jumpCount === maxJumps) {
+                            fall();
+                        }
                     }
                 }, 16);
             }
@@ -195,7 +199,7 @@
                 } else {
                     clearInterval(fallInterval);
                     player.style.bottom = `${groundHeight}px`;
-                    isJumping = false;
+                    jumpCount = 0; // 地面に着いたらジャンプカウントをリセット
                 }
             }, 16);
         }
@@ -290,23 +294,31 @@
         function resetGame() {
             score = 0;
             gameSpeed = 3;
+            jumpCount = 0;
             updateScore();
             const groundHeight = gameArea.clientHeight * 0.15;
             player.style.bottom = `${groundHeight}px`;
             obstacle.style.right = '-10vw';
             gameOverScreen.style.display = 'none';
-            isJumping = false;
             startGame();
         }
 
         startButton.addEventListener('click', startGame);
         replayButton.addEventListener('click', resetGame);
 
-        // タッチイベントの処理
+        // タッチイベントの処理を改善
         gameArea.addEventListener('touchstart', function(e) {
+            e.preventDefault(); // デフォルトの動作を防止
             if (e.target === startButton || e.target === replayButton) {
                 e.target.click(); // ボタンのクリックイベントを発火
             } else if (gameStarted && e.target !== playerNameInput) {
+                jump();
+            }
+        }, { passive: false });
+
+        // クリックイベントの処理も追加
+        gameArea.addEventListener('click', function(e) {
+            if (gameStarted && e.target !== startButton && e.target !== replayButton && e.target !== playerNameInput) {
                 jump();
             }
         });
