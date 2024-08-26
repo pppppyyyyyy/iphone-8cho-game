@@ -223,7 +223,6 @@
                         updateHeight();
                         updateVisuals();
                         moveObstacle();
-                        checkCollision();
                         
                         if (height >= maxHeight) {
                             clearInterval(jumpInterval);
@@ -253,26 +252,8 @@
                 const gameAreaWidth = gameArea.clientWidth;
                 if (obstacleRight > gameAreaWidth) {
                     obstacle.style.right = '-10vw';
-                    height += 10;
-                    updateHeight();
                 } else {
                     obstacle.style.right = `${obstacleRight + gameSpeed}px`;
-                }
-            }
-
-            function checkCollision() {
-                const playerRect = player.getBoundingClientRect();
-                const obstacleRect = obstacle.getBoundingClientRect();
-
-                const collisionThreshold = 0.6;
-
-                if (
-                    playerRect.left < obstacleRect.right - (obstacleRect.width * (1 - collisionThreshold)) &&
-                    playerRect.right > obstacleRect.left + (obstacleRect.width * (1 - collisionThreshold)) &&
-                    playerRect.top < obstacleRect.bottom - (obstacleRect.height * (1 - collisionThreshold)) &&
-                    playerRect.bottom > obstacleRect.top + (obstacleRect.height * (1 - collisionThreshold))
-                ) {
-                    gameOver();
                 }
             }
 
