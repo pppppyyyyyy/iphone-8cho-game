@@ -32,10 +32,11 @@
         .player {
             width: 15vw;
             height: 15vw;
+            max-width: 100px;
+            max-height: 100px;
             position: absolute;
             bottom: 15%;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 10%;
             background-image: url('https://imgur.com/EmQCrLS.jpg');
             background-size: contain;
             background-repeat: no-repeat;
@@ -43,12 +44,15 @@
             transition: bottom 0.1s;
         }
         .obstacle {
-            width: 50px;
-            height: 50px;
+            width: 10vw;
+            height: 15vw;
             position: absolute;
-            background-color: yellow;
-            border-radius: 50%;
-            right: -50px;
+            bottom: 15%;
+            right: -10vw;
+            background-image: url('https://i.imgur.com/XPq4HGT.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
         }
         .ground {
             width: 100%;
@@ -142,8 +146,8 @@
         <div id="game-area" class="game-area">
             <div class="stars" id="stars"></div>
             <div id="player" class="player"></div>
+            <div id="obstacle" class="obstacle" style="display: none;"></div>
             <div class="ground"></div>
-            <div id="obstacle" class="obstacle"></div>
             <div id="start-screen" class="start-screen">
                 <h1>iPhone8兆</h1>
                 <input type="text" id="player-name" placeholder="ニックネームを入力">
@@ -171,6 +175,7 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const player = document.getElementById('player');
+            const obstacle = document.getElementById('obstacle');
             const startScreen = document.getElementById('start-screen');
             const gameOverScreen = document.getElementById('game-over-screen');
             const countdownScreen = document.getElementById('countdown-screen');
@@ -186,7 +191,6 @@
             const jumpButton = document.getElementById('jump-button');
             const ground = document.querySelector('.ground');
             const starsContainer = document.getElementById('stars');
-            const obstacle = document.getElementById('obstacle');
 
             let height = 0;
             let jumpSpeed = 100;
@@ -194,7 +198,7 @@
             let rankings = [];
             let gameStarted = false;
             let isJumping = false;
-            let obstacleSpeed = 1;
+            let gameSpeed = 5;
 
             const maxHeight = 400000;
 
@@ -247,12 +251,12 @@
             function moveObstacle() {
                 let obstacleRight = parseFloat(window.getComputedStyle(obstacle).getPropertyValue('right'));
                 const gameAreaWidth = gameArea.clientWidth;
-                
                 if (obstacleRight > gameAreaWidth) {
-                    obstacle.style.right = '-50px';
-                    obstacle.style.top = `${Math.random() * 80}%`;
+                    obstacle.style.right = '-10vw';
+                    height += 10;
+                    updateHeight();
                 } else {
-                    obstacle.style.right = `${obstacleRight + obstacleSpeed}px`;
+                    obstacle.style.right = `${obstacleRight + gameSpeed}px`;
                 }
             }
 
@@ -260,11 +264,13 @@
                 const playerRect = player.getBoundingClientRect();
                 const obstacleRect = obstacle.getBoundingClientRect();
 
+                const collisionThreshold = 0.6;
+
                 if (
-                    playerRect.left < obstacleRect.right &&
-                    playerRect.right > obstacleRect.left &&
-                    playerRect.top < obstacleRect.bottom &&
-                    playerRect.bottom > obstacleRect.top
+                    playerRect.left < obstacleRect.right - (obstacleRect.width * (1 - collisionThreshold)) &&
+                    playerRect.right > obstacleRect.left + (obstacleRect.width * (1 - collisionThreshold)) &&
+                    playerRect.top < obstacleRect.bottom - (obstacleRect.height * (1 - collisionThreshold)) &&
+                    playerRect.bottom > obstacleRect.top + (obstacleRect.height * (1 - collisionThreshold))
                 ) {
                     gameOver();
                 }
@@ -335,8 +341,7 @@
                 starsContainer.style.opacity = 0;
                 ground.style.opacity = 1;
                 gameOverScreen.style.display = 'none';
-                obstacle.style.right = '-50px';
-                obstacle.style.top = `${Math.random() * 80}%`;
+                obstacle.style.right = '-10vw';
                 startGame();
             }
 
