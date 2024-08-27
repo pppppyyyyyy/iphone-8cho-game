@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>iPhone8兆 ジャンピングゲーム</title>
     <style>
+        /* 前回のスタイルを保持 */
         body, html {
             margin: 0;
             padding: 0;
@@ -114,11 +115,27 @@
             align-items: center;
             user-select: none;
         }
+
+        /* 爆発エフェクト用のスタイル */
+        .explosion {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, yellow, orange, red);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9;
+        }
+        @keyframes explode {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="game-area" class="game-area">
+            <div class="explosion"></div>
             <div id="player" class="player"></div>
             <div class="ground"></div>
             <div id="start-screen" class="start-screen">
@@ -147,6 +164,7 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 前回のJavaScript部分を保持
             const player = document.getElementById('player');
             const startScreen = document.getElementById('start-screen');
             const gameOverScreen = document.getElementById('game-over-screen');
@@ -162,6 +180,7 @@
             const gameArea = document.getElementById('game-area');
             const jumpButton = document.getElementById('jump-button');
             const ground = document.querySelector('.ground');
+            const explosion = document.querySelector('.explosion');
 
             let height = 0;
             let jumpSpeed = 5;
@@ -172,6 +191,37 @@
             let hellProgress = 0;
 
             const maxHeight = 10000;
+
+            function startExplosion() {
+                explosion.style.animation = 'explode 0.5s forwards';
+                setTimeout(() => {
+                    explosion.style.animation = '';
+                    startRotation();
+                }, 500);
+            }
+
+            function startRotation() {
+                let rotation = 0;
+                const explosionInterval = setInterval(() => {
+                    rotation += 10;
+                    height += 10;
+                    player.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+                    player.style.bottom = `${Math.min(85, 15 + (height / 1000) * 70)}%`;
+                    updateHeight();
+
+                    if (height >= 1000) {
+                        clearInterval(explosionInterval);
+                        startHeavenPhase();
+                    }
+                }, 16);
+            }
+
+            function startHeavenPhase() {
+                gameArea.style.backgroundColor = '#87CEEB';
+                ground.style.opacity = 0;
+                jumpButton.style.display = 'flex';
+                gameStarted = true;
+            }
 
             function jump() {
                 if (gameStarted && !isJumping) {
@@ -224,29 +274,6 @@
                 }
 
                 hellProgress += 0.001;
-            }
-
-            function startExplosion() {
-                let rotation = 0;
-                const explosionInterval = setInterval(() => {
-                    rotation += 10;
-                    height += 10;
-                    player.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-                    player.style.bottom = `${Math.min(85, 15 + (height / 1000) * 70)}%`;
-                    updateHeight();
-
-                    if (height >= 1000) {
-                        clearInterval(explosionInterval);
-                        startHeavenPhase();
-                    }
-                }, 16);
-            }
-
-            function startHeavenPhase() {
-                gameArea.style.backgroundColor = '#87CEEB';
-                ground.style.opacity = 0;
-                jumpButton.style.display = 'flex';
-                gameStarted = true;
             }
 
             function startGame() {
