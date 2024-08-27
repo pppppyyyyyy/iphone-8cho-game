@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>iPhone8兆 ジャンピングゲーム</title>
     <style>
-        /* 前回のスタイルを保持 */
         body, html {
             margin: 0;
             padding: 0;
@@ -37,13 +36,23 @@
             max-height: 100px;
             position: absolute;
             bottom: 15%;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 10%;
             background-image: url('https://imgur.com/EmQCrLS.jpg');
             background-size: contain;
             background-repeat: no-repeat;
             background-position: center bottom;
             transition: bottom 0.1s, transform 0.1s;
+        }
+        .obstacle {
+            width: 10vw;
+            height: 15vw;
+            position: absolute;
+            bottom: 15%;
+            right: -10vw;
+            background-image: url('https://i.imgur.com/XPq4HGT.jpg');
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center bottom;
         }
         .ground {
             width: 100%;
@@ -115,28 +124,80 @@
             align-items: center;
             user-select: none;
         }
-
-        /* 爆発エフェクト用のスタイル */
-        .explosion {
+        .explosion-container {
             position: absolute;
             width: 100%;
             height: 100%;
-            background: radial-gradient(circle, yellow, orange, red);
-            opacity: 0;
             pointer-events: none;
             z-index: 9;
+            display: none;
         }
-        @keyframes explode {
-            0% { transform: scale(0); opacity: 1; }
-            100% { transform: scale(2); opacity: 0; }
+        .explosion-core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: radial-gradient(circle, white, yellow, orange, red);
+            opacity: 0;
+        }
+        .explosion-shockwave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            opacity: 0;
+        }
+        .explosion-particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: orange;
+            border-radius: 50%;
+            opacity: 0;
+        }
+        .explosion-smoke {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: rgba(100, 100, 100, 0.8);
+            border-radius: 50%;
+            opacity: 0;
+        }
+        @keyframes explode-core {
+            0% { width: 0; height: 0; opacity: 1; }
+            50% { opacity: 1; }
+            100% { width: 300vw; height: 300vw; opacity: 0; }
+        }
+        @keyframes explode-shockwave {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 400vw; height: 400vw; opacity: 0; }
+        }
+        @keyframes particle-move {
+            0% { transform: translate(0, 0); opacity: 1; }
+            100% { transform: translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+        @keyframes smoke-rise {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.8; }
+            100% { transform: translate(var(--tx), var(--ty)) scale(3); opacity: 0; }
         }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="game-area" class="game-area">
-            <div class="explosion"></div>
+            <div class="explosion-container">
+                <div class="explosion-core"></div>
+                <div class="explosion-shockwave"></div>
+            </div>
             <div id="player" class="player"></div>
+            <div id="obstacle" class="obstacle"></div>
             <div class="ground"></div>
             <div id="start-screen" class="start-screen">
                 <h1>iPhone8兆</h1>
@@ -162,197 +223,264 @@
         </div>
     </div>
 
+    <audio id="explosion-sound" src="https://soundbible.com/grab.php?id=2068&type=mp3" preload="auto"></audio>
+
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // 前回のJavaScript部分を保持
-            const player = document.getElementById('player');
-            const startScreen = document.getElementById('start-screen');
-            const gameOverScreen = document.getElementById('game-over-screen');
-            const countdownScreen = document.getElementById('countdown-screen');
-            const countdownElement = document.getElementById('countdown');
-            const heightDisplay = document.getElementById('height-display');
-            const heightElement = document.getElementById('height');
-            const finalHeightElement = document.getElementById('final-height');
-            const startButton = document.getElementById('start-button');
-            const replayButton = document.getElementById('replay-button');
-            const playerNameInput = document.getElementById('player-name');
-            const rankingList = document.getElementById('ranking-list');
-            const gameArea = document.getElementById('game-area');
-            const jumpButton = document.getElementById('jump-button');
-            const ground = document.querySelector('.ground');
-            const explosion = document.querySelector('.explosion');
+    const player = document.getElementById('player');
+    const obstacle = document.getElementById('obstacle');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const countdownScreen = document.getElementById('countdown-screen');
+    const countdownElement = document.getElementById('countdown');
+    const heightDisplay = document.getElementById('height-display');
+    const heightElement = document.getElementById('height');
+    const finalHeightElement = document.getElementById('final-height');
+    const startButton = document.getElementById('start-button');
+    const replayButton = document.getElementById('replay-button');
+    const playerNameInput = document.getElementById('player-name');
+    const rankingList = document.getElementById('ranking-list');
+    const gameArea = document.getElementById('game-area');
+    const jumpButton = document.getElementById('jump-button');
+    const ground = document.querySelector('.ground');
+    const explosionContainer = document.querySelector('.explosion-container');
+    const explosionCore = document.querySelector('.explosion-core');
+    const explosionShockwave = document.querySelector('.explosion-shockwave');
+    const explosionSound = document.getElementById('explosion-sound');
 
-            let height = 0;
-            let jumpSpeed = 5;
-            let jumpAcceleration = 0.2;
-            let rankings = [];
-            let gameStarted = false;
-            let isJumping = false;
-            let hellProgress = 0;
+    let height = 0;
+    let jumpSpeed = 5;
+    let jumpAcceleration = 0.2;
+    let rankings = [];
+    let gameStarted = false;
+    let isJumping = false;
+    let hellProgress = 0;
+    let gameLoop;
 
-            const maxHeight = 10000;
+    const maxHeight = 10000;
 
-            function startExplosion() {
-                explosion.style.animation = 'explode 0.5s forwards';
-                setTimeout(() => {
-                    explosion.style.animation = '';
-                    startRotation();
-                }, 500);
+    function startMassiveExplosion() {
+        explosionSound.play();
+        explosionContainer.style.display = 'block';
+
+        explosionCore.style.animation = 'explode-core 2s forwards';
+        explosionShockwave.style.animation = 'explode-shockwave 2s forwards';
+
+        for (let i = 0; i < 100; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'explosion-particle';
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 200 + 50;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+            particle.style.animation = `particle-move ${Math.random() * 1 + 0.5}s forwards`;
+            explosionContainer.appendChild(particle);
+        }
+
+        for (let i = 0; i < 20; i++) {
+            const smoke = document.createElement('div');
+            smoke.className = 'explosion-smoke';
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 100 + 50;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance - 200;
+            smoke.style.setProperty('--tx', `${tx}px`);
+            smoke.style.setProperty('--ty', `${ty}px`);
+            smoke.style.animation = `smoke-rise ${Math.random() * 2 + 1}s forwards ${Math.random()}s`;
+            explosionContainer.appendChild(smoke);
+        }
+
+        setTimeout(() => {
+            startRotation();
+            explosionContainer.style.display = 'none';
+        }, 2000);
+    }
+
+    function startRotation() {
+        let rotation = 0;
+        const rotationInterval = setInterval(() => {
+            rotation += 10;
+            height += 10;
+            player.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
+            player.style.bottom = `${Math.min(85, 15 + (height / 1000) * 70)}%`;
+            updateHeight();
+
+            if (height >= 1000) {
+                clearInterval(rotationInterval);
+                startHeavenPhase();
             }
+        }, 16);
+    }
 
-            function startRotation() {
-                let rotation = 0;
-                const explosionInterval = setInterval(() => {
-                    rotation += 10;
-                    height += 10;
-                    player.style.transform = `translateX(-50%) rotate(${rotation}deg)`;
-                    player.style.bottom = `${Math.min(85, 15 + (height / 1000) * 70)}%`;
-                    updateHeight();
+    function startHeavenPhase() {
+        gameArea.style.backgroundColor = '#87CEEB';
+        ground.style.opacity = 0;
+        jumpButton.style.display = 'flex';
+        gameStarted = true;
+    }
 
-                    if (height >= 1000) {
-                        clearInterval(explosionInterval);
-                        startHeavenPhase();
-                    }
-                }, 16);
-            }
-
-            function startHeavenPhase() {
-                gameArea.style.backgroundColor = '#87CEEB';
-                ground.style.opacity = 0;
-                jumpButton.style.display = 'flex';
-                gameStarted = true;
-            }
-
-            function jump() {
-                if (gameStarted && !isJumping) {
-                    isJumping = true;
-                    const jumpInterval = setInterval(() => {
-                        height += jumpSpeed;
-                        jumpSpeed += jumpAcceleration;
-                        updateHeight();
-                        updateVisuals();
-                        
-                        if (height >= maxHeight || hellProgress >= 1) {
-                            clearInterval(jumpInterval);
-                            gameOver();
-                        } else if (jumpSpeed <= 0) {
-                            isJumping = false;
-                            clearInterval(jumpInterval);
-                            fall();
-                        }
-                    }, 16);
-                }
-            }
-
-            function fall() {
-                const fallInterval = setInterval(() => {
-                    height -= jumpSpeed;
-                    jumpSpeed -= jumpAcceleration;
-                    if (height <= 0) {
-                        height = 0;
-                        jumpSpeed = 5;
-                        clearInterval(fallInterval);
-                    }
-                    updateHeight();
-                    updateVisuals();
-                }, 16);
-            }
-
-            function updateHeight() {
-                heightElement.textContent = Math.floor(height);
-            }
-
-            function updateVisuals() {
-                const progress = height / maxHeight;
-                player.style.bottom = `${Math.min(85, 15 + progress * 70)}%`;
-                player.style.transform = `translateX(-50%) rotate(${height * 2}deg)`;
+    function jump() {
+        if (gameStarted && !isJumping) {
+            isJumping = true;
+            const jumpInterval = setInterval(() => {
+                height += jumpSpeed;
+                jumpSpeed += jumpAcceleration;
+                updateHeight();
+                updateVisuals();
                 
-                if (hellProgress > 0) {
-                    gameArea.style.backgroundImage = `linear-gradient(rgba(135, 206, 235, ${1 - hellProgress}), rgba(255, 0, 0, ${hellProgress})), url('https://imgur.com/yCCS0mB.jpg')`;
-                    gameArea.style.backgroundSize = 'cover';
-                    gameArea.style.backgroundPosition = 'center';
+                if (height >= maxHeight || hellProgress >= 1) {
+                    clearInterval(jumpInterval);
+                    gameOver();
+                } else if (jumpSpeed <= 0) {
+                    isJumping = false;
+                    clearInterval(jumpInterval);
+                    fall();
                 }
+            }, 16);
+        }
+    }
 
-                hellProgress += 0.001;
-            }
-
-            function startGame() {
-                if (playerNameInput.value.trim() === '') return;
-                startScreen.style.display = 'none';
-                countdownScreen.style.display = 'flex';
-                let count = 3;
-                countdownElement.textContent = count;
-                const countdownInterval = setInterval(() => {
-                    count--;
-                    if (count > 0) {
-                        countdownElement.textContent = count;
-                    } else {
-                        clearInterval(countdownInterval);
-                        countdownScreen.style.display = 'none';
-                        heightDisplay.style.display = 'block';
-                        startExplosion();
-                    }
-                }, 1000);
-            }
-
-            function gameOver() {
-                gameStarted = false;
-                isJumping = false;
-                jumpButton.style.display = 'none';
-                gameOverScreen.style.display = 'flex';
-                finalHeightElement.textContent = `到達高度: ${Math.floor(height)}m`;
-                updateRankings();
-                displayRankings();
-            }
-
-            function updateRankings() {
-                const playerName = playerNameInput.value.trim();
-                rankings.push({ name: playerName, height: Math.floor(height) });
-                rankings.sort((a, b) => b.height - a.height);
-                rankings = rankings.slice(0, 5);
-            }
-
-            function displayRankings() {
-                rankingList.innerHTML = '';
-                rankings.forEach(rank => {
-                    const li = document.createElement('li');
-                    li.textContent = `${rank.name}: ${rank.height}m`;
-                    rankingList.appendChild(li);
-                });
-            }
-
-            function resetGame() {
+    function fall() {
+        const fallInterval = setInterval(() => {
+            height -= jumpSpeed;
+            jumpSpeed -= jumpAcceleration;
+            if (height <= 0) {
                 height = 0;
                 jumpSpeed = 5;
-                isJumping = false;
-                hellProgress = 0;
-                updateHeight();
-                gameArea.style.backgroundImage = 'none';
-                gameArea.style.backgroundColor = '#87CEEB';
-                ground.style.opacity = 1;
-                gameOverScreen.style.display = 'none';
-                player.style.transform = 'translateX(-50%) rotate(0deg)';
-                player.style.bottom = '15%';
-                startGame();
+                clearInterval(fallInterval);
             }
+            updateHeight();
+            updateVisuals();
+        }, 16);
+    }
 
-            startButton.addEventListener('click', startGame);
-            replayButton.addEventListener('click', resetGame);
-            jumpButton.addEventListener('click', jump);
+    function updateHeight() {
+        heightElement.textContent = Math.floor(height);
+    }
 
-            document.addEventListener('keydown', function(e) {
-                if (e.code === 'Space' && gameStarted && !isJumping) {
-                    e.preventDefault();
-                    jump();
-                }
-            });
+    function updateVisuals() {
+        const progress = height / maxHeight;
+        player.style.bottom = `${Math.min(85, 15 + progress * 70)}%`;
+        
+        if (hellProgress > 0) {
+            gameArea.style.backgroundImage = `linear-gradient(rgba(135, 206, 235, ${1 - hellProgress}), rgba(255, 0, 0, ${hellProgress})), url('https://imgur.com/yCCS0mB.jpg')`;
+            gameArea.style.backgroundSize = 'cover';
+            gameArea.style.backgroundPosition = 'center';
+        }
 
-            document.body.addEventListener('touchmove', function(e) {
-                if (gameStarted) {
-                    e.preventDefault();
-                }
-            }, { passive: false });
+        hellProgress += 0.001;
+    }
+
+    function moveObstacle() {
+        let obstacleRight = parseFloat(window.getComputedStyle(obstacle).getPropertyValue('right'));
+        const gameAreaWidth = gameArea.clientWidth;
+        if (obstacleRight > gameAreaWidth) {
+            obstacle.style.right = '-10vw';
+        } else {
+            obstacle.style.right = `${obstacleRight + 5}px`;
+        }
+    }
+
+    function checkCollision() {
+        const playerRect = player.getBoundingClientRect();
+        const obstacleRect = obstacle.getBoundingClientRect();
+
+        if (
+            playerRect.left < obstacleRect.right &&
+            playerRect.right > obstacleRect.left &&
+            playerRect.top < obstacleRect.bottom &&
+            playerRect.bottom > obstacleRect.top
+        ) {
+            clearInterval(gameLoop);
+            startMassiveExplosion();
+        }
+    }
+
+    function startGame() {
+        if (playerNameInput.value.trim() === '') return;
+        startScreen.style.display = 'none';
+        countdownScreen.style.display = 'flex';
+        let count = 3;
+        countdownElement.textContent = count;
+        const countdownInterval = setInterval(() => {
+            count--;
+            if (count > 0) {
+                countdownElement.textContent = count;
+            } else {
+                clearInterval(countdownInterval);
+                countdownScreen.style.display = 'none';
+                heightDisplay.style.display = 'block';
+                obstacle.style.display = 'block';
+                gameStarted = true;
+                gameLoop = setInterval(() => {
+                    moveObstacle();
+                    checkCollision();
+                }, 16);
+            }
+        }, 1000);
+    }
+
+    function gameOver() {
+        gameStarted = false;
+        isJumping = false;
+        jumpButton.style.display = 'none';
+        gameOverScreen.style.display = 'flex';
+        finalHeightElement.textContent = `到達高度: ${Math.floor(height)}m`;
+        updateRankings();
+        displayRankings();
+    }
+
+    function updateRankings() {
+        const playerName = playerNameInput.value.trim();
+        rankings.push({ name: playerName, height: Math.floor(height) });
+        rankings.sort((a, b) => b.height - a.height);
+        rankings = rankings.slice(0, 5);
+    }
+
+    function displayRankings() {
+        rankingList.innerHTML = '';
+        rankings.forEach(rank => {
+            const li = document.createElement('li');
+            li.textContent = `${rank.name}: ${rank.height}m`;
+            rankingList.appendChild(li);
         });
+    }
+
+    function resetGame() {
+        height = 0;
+        jumpSpeed = 5;
+        isJumping = false;
+        hellProgress = 0;
+        updateHeight();
+        gameArea.style.backgroundImage = 'none';
+        gameArea.style.backgroundColor = '#87CEEB';
+        ground.style.opacity = 1;
+        gameOverScreen.style.display = 'none';
+        player.style.transform = 'translateX(-50%) rotate(0deg)';
+        player.style.bottom = '15%';
+        obstacle.style.right = '-10vw';
+        startGame();
+    }
+
+    startButton.addEventListener('click', startGame);
+    replayButton.addEventListener('click', resetGame);
+    jumpButton.addEventListener('click', jump);
+
+    document.addEventListener('keydown', function(e) {
+        if (e.code === 'Space' && gameStarted && !isJumping) {
+            e.preventDefault();
+            jump();
+        }
+    });
+
+    document.body.addEventListener('touchmove', function(e) {
+        if (gameStarted) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+});
     </script>
 </body>
 </html>
